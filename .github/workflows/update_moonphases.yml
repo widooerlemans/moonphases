@@ -1,0 +1,30 @@
+name: Update Moon Phases JSON
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # every day at midnight UTC
+  workflow_dispatch:     # allow manual trigger
+
+jobs:
+  update-phases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run script to generate moon phases
+        run: |
+          python .github/scripts/generate_moonphases.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add moonphases.json
+          git commit -m "Update moon phases JSON" || echo "No changes"
+          git push
