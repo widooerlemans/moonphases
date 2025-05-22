@@ -1,18 +1,6 @@
 [
-  {
-    "name": "New Moon",
-    "date": "2025-01-01T00:00:00Z"
-  },
-  {
-    "name": "First Quarter",
-    "date": "2025-01-08T00:00:00Z"
-  },
-  {
-    "name": "Full Moon",
-    "date": "2025-01-15T00:00:00Z"
-  },
-  {
-    "name": "Third Quarter",
-    "date": "2025-01-22T00:00:00Z"
-  }
+  { "name": "New Moon", "date": "2025-05-23T12:00:00Z" },
+  { "name": "First Quarter", "date": "2025-05-30T12:00:00Z" },
+  { "name": "Full Moon", "date": "2025-06-06T12:00:00Z" },
+  { "name": "Third Quarter", "date": "2025-06-14T12:00:00Z" }
 ]
