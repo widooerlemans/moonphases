@@ -7,30 +7,66 @@
     body {
       background: #111;
       color: #fff;
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 20px;
       text-align: center;
     }
     h2 {
       margin-bottom: 20px;
+      font-weight: 600;
     }
-    ul {
-      list-style-type: none;
-      padding-left: 0;
+    #moon-phases-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      max-width: 800px;
+      margin: 0 auto;
     }
-    li {
-      margin: 10px 0;
-      font-size: 1.2em;
+    .phase-card {
+      background: #222;
+      border-radius: 10px;
+      padding: 15px 20px;
+      width: 180px;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease;
+    }
+    .phase-card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px #7a9fff;
+    }
+    .phase-emoji {
+      font-size: 3em;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .phase-name {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .phase-date {
+      font-size: 0.9em;
+      color: #bbb;
     }
   </style>
 </head>
 <body>
   <h2>🌘 Next 4 Moon Phases</h2>
-  <div id="moon-phases-container">Loading...</div>
+  <div id="moon-phases-container">
+    Loading...
+  </div>
 
 <script>
+// Moon phases calculation based on simplified algorithm
 (function() {
-  const phases = ["New Moon", "First Quarter", "Full Moon", "Third Quarter"];
+  const phases = [
+    { name: "New Moon", emoji: "🌑", value: 0 },
+    { name: "First Quarter", emoji: "🌓", value: 0.25 },
+    { name: "Full Moon", emoji: "🌕", value: 0.5 },
+    { name: "Third Quarter", emoji: "🌗", value: 0.75 }
+  ];
+
   const lunarCycle = 29.530588853;
   const knownNewMoon = new Date(Date.UTC(2000, 0, 6, 18, 14));
 
@@ -39,72 +75,79 @@
   }
 
   function moonPhase(date) {
-    let days = daysSinceKnownNewMoon(date);
-    let phase = (days % lunarCycle) / lunarCycle;
+    const days = daysSinceKnownNewMoon(date);
+    const phase = (days % lunarCycle) / lunarCycle;
     return phase < 0 ? phase + 1 : phase;
   }
 
   function nextPhaseDate(currentDate, targetPhase) {
     let date = new Date(currentDate);
+    const tolerance = 0.03; // ~1 day tolerance
     for (let i = 0; i < 30; i++) {
-      let phase = moonPhase(date);
+      const phase = moonPhase(date);
       let diff = Math.abs(phase - targetPhase);
-      if(diff > 0.5) diff = 1 - diff;
-      if (diff < 0.03) {
-        return date;
-      }
+      if (diff > 0.5) diff = 1 - diff; // wrap-around
+      if (diff < tolerance) return date;
       date.setDate(date.getDate() + 1);
     }
     return null;
   }
 
   function formatDate(date) {
-    return date.toLocaleString(undefined, {
-      weekday: 'long',
+    const options = {
+      weekday: 'short',
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
-    });
+    };
+    return date.toLocaleString(undefined, options);
   }
-
-  const targetPhases = {
-    "New Moon": 0,
-    "First Quarter": 0.25,
-    "Full Moon": 0.5,
-    "Third Quarter": 0.75
-  };
 
   const now = new Date();
-  let results = [];
-  let searchDate = new Date(now);
 
-  while (results.length < 4) {
-    let nextDates = phases.map(phaseName => ({
-      name: phaseName,
-      date: nextPhaseDate(searchDate, targetPhases[phaseName])
-    })).filter(x => x.date !== null);
-
-    if (nextDates.length === 0) break;
-
-    nextDates.sort((a, b) => a.date - b.date);
-    const nextPhase = nextDates[0];
-
-    results.push(nextPhase);
-    searchDate = new Date(nextPhase.date);
-    searchDate.setDate(searchDate.getDate() + 1);
+  // Find current moon phase index (closest)
+  const currentPhaseValue = moonPhase(now);
+  let currentPhaseIndex = 0;
+  let closestDiff = 1;
+  for (let i = 0; i < phases.length; i++) {
+    let diff = Math.abs(currentPhaseValue - phases[i].value);
+    if (diff > 0.5) diff = 1 - diff;
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      currentPhaseIndex = i;
+    }
   }
 
+  // Find next 4 phases cycling through list
+  let searchDate = new Date(now);
+  let results = [];
+  for (let i = 0; i < 4; i++) {
+    const phase = phases[(currentPhaseIndex + i) % phases.length];
+    const nextDate = nextPhaseDate(searchDate, phase.value);
+    if (nextDate) {
+      results.push({ ...phase, date: nextDate });
+      searchDate = new Date(nextDate);
+      searchDate.setDate(searchDate.getDate() + 1);
+    }
+  }
+
+  // Render results
   const container = document.getElementById("moon-phases-container");
   if (container) {
-    let html = "<ul>";
+    container.innerHTML = "";
     results.forEach(phase => {
-      html += `<li><strong>${phase.name}</strong> on ${formatDate(phase.date)}</li>`;
+      const phaseDiv = document.createElement("div");
+      phaseDiv.className = "phase-card";
+      phaseDiv.innerHTML = `
+        <span class="phase-emoji">${phase.emoji}</span>
+        <div class="phase-name">${phase.name}</div>
+        <div class="phase-date">${formatDate(phase.date)}</div>
+      `;
+      container.appendChild(phaseDiv);
     });
-    html += "</ul>";
-    container.innerHTML = html;
   }
 })();
 </script>
