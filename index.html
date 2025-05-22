@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upcoming Moon Phases</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    .phase {
+      margin: 10px 0;
+      font-size: 1.2em;
+    }
+    .emoji {
+      font-size: 1.5em;
+      margin-right: 0.3em;
+    }
+  </style>
+</head>
+<body>
+  <h2>🌘 Upcoming Moon Phases</h2>
+  <div id="phases">Loading...</div>
+
+  <script>
+    const moonPhases = [
+      { name: "New Moon", emoji: "🌑" },
+      { name: "First Quarter", emoji: "🌓" },
+      { name: "Full Moon", emoji: "🌕" },
+      { name: "Last Quarter", emoji: "🌗" }
+    ];
+
+    async function fetchPhases() {
+      try {
+        const res = await fetch("https://www.icalendar37.net/lunar/api/?lang=en&month=" + (new Date().getMonth() + 1) + "&year=" + new Date().getFullYear());
+        const data = await res.json();
+
+        let results = [];
+        const today = new Date();
+
+        Object.values(data.phase).forEach(day => {
+          if (results.length >= 4) return;
+          const date = new Date(day.date);
+          const match = moonPhases.find(p => p.name === day.phaseName);
+          if (match && date >= today) {
+            results.push(`<div class="phase"><span class="emoji">${match.emoji}</span>${match.name} on ${date.toDateString()}</div>`);
+          }
+        });
+
+        document.getElementById("phases").innerHTML = results.join('');
+      } catch (e) {
+        document.getElementById("phases").innerHTML = "Failed to load moon phase data.";
+      }
+    }
+
+    fetchPhases();
+  </script>
+</body>
+</html>
