@@ -18,16 +18,18 @@
     #moon-phases-container {
       display: flex;
       justify-content: center;
-      gap: 30px;
-      flex-wrap: wrap;
-      max-width: 800px;
-      margin: 0 auto;
+      gap: 20px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 10px;
     }
     .phase-card {
       background: #222;
       border-radius: 10px;
       padding: 15px 20px;
-      width: 180px;
+      width: 150px; /* smaller width to fit 4 cards comfortably */
+      flex-shrink: 0; /* prevent shrinking */
       box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
       transition: transform 0.3s ease;
     }
@@ -58,7 +60,6 @@
   </div>
 
 <script>
-// Moon phases calculation based on simplified algorithm
 (function() {
   const phases = [
     { name: "New Moon", emoji: "🌑", value: 0 },
@@ -68,7 +69,7 @@
   ];
 
   const lunarCycle = 29.530588853;
-  const knownNewMoon = new Date(Date.UTC(2000, 0, 6, 18, 14));
+  const knownNewMoon = new Date(Date.UTC(2000, 0, 6, 18, 14)); // Jan 6, 2000 18:14 UTC
 
   function daysSinceKnownNewMoon(date) {
     return (date - knownNewMoon) / (1000 * 60 * 60 * 24);
@@ -76,10 +77,12 @@
 
   function moonPhase(date) {
     const days = daysSinceKnownNewMoon(date);
-    const phase = (days % lunarCycle) / lunarCycle;
-    return phase < 0 ? phase + 1 : phase;
+    let phase = (days % lunarCycle) / lunarCycle;
+    if (phase < 0) phase += 1;
+    return phase;
   }
 
+  // Find next date when moon phase is near targetPhase (approximate, day precision)
   function nextPhaseDate(currentDate, targetPhase) {
     let date = new Date(currentDate);
     const tolerance = 0.03; // ~1 day tolerance
@@ -87,28 +90,31 @@
       const phase = moonPhase(date);
       let diff = Math.abs(phase - targetPhase);
       if (diff > 0.5) diff = 1 - diff; // wrap-around
-      if (diff < tolerance) return date;
-      date.setDate(date.getDate() + 1);
+      if (diff < tolerance) {
+        // Return date at midnight UTC (strip time for cleaner display)
+        return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+      }
+      date.setUTCDate(date.getUTCDate() + 1);
     }
     return null;
   }
 
   function formatDate(date) {
+    // Format like: "Tue, 17 Jun 2025"
     const options = {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      timeZone: 'UTC',
       hour12: false
     };
-    return date.toLocaleString(undefined, options);
+    return date.toLocaleDateString(undefined, options);
   }
 
   const now = new Date();
 
-  // Find current moon phase index (closest)
+  // Find closest current phase index
   const currentPhaseValue = moonPhase(now);
   let currentPhaseIndex = 0;
   let closestDiff = 1;
@@ -121,7 +127,7 @@
     }
   }
 
-  // Find next 4 phases cycling through list
+  // Get next 4 phases cycling through phases list
   let searchDate = new Date(now);
   let results = [];
   for (let i = 0; i < 4; i++) {
@@ -130,11 +136,10 @@
     if (nextDate) {
       results.push({ ...phase, date: nextDate });
       searchDate = new Date(nextDate);
-      searchDate.setDate(searchDate.getDate() + 1);
+      searchDate.setUTCDate(searchDate.getUTCDate() + 1);
     }
   }
 
-  // Render results
   const container = document.getElementById("moon-phases-container");
   if (container) {
     container.innerHTML = "";
