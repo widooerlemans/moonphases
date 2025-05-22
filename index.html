@@ -25,41 +25,112 @@
   </style>
 </head>
 <body>
+  <div id="moon-phases-container"></div>
   <h2>🌘 Upcoming Moon Phases</h2>
   <div id="phases">Loading...</div>
 
-  <script>
-    const moonPhases = [
-      { name: "New Moon", emoji: "🌑" },
-      { name: "First Quarter", emoji: "🌓" },
-      { name: "Full Moon", emoji: "🌕" },
-      { name: "Last Quarter", emoji: "🌗" }
-    ];
+<script>
+// Moon phases calculation based on simplified algorithm
+(function() {
+  // Names of moon phases
+  const phases = [
+    "New Moon",
+    "First Quarter",
+    "Full Moon",
+    "Third Quarter"
+  ];
 
-    async function fetchPhases() {
-      try {
-        const res = await fetch("https://www.icalendar37.net/lunar/api/?lang=en&month=" + (new Date().getMonth() + 1) + "&year=" + new Date().getFullYear());
-        const data = await res.json();
+  // Approximate length of lunar cycle in days
+  const lunarCycle = 29.530588853;
 
-        let results = [];
-        const today = new Date();
+  // Reference known new moon date (Jan 6, 2000 18:14 UTC)
+  const knownNewMoon = new Date(Date.UTC(2000, 0, 6, 18, 14));
 
-        Object.values(data.phase).forEach(day => {
-          if (results.length >= 4) return;
-          const date = new Date(day.date);
-          const match = moonPhases.find(p => p.name === day.phaseName);
-          if (match && date >= today) {
-            results.push(`<div class="phase"><span class="emoji">${match.emoji}</span>${match.name} on ${date.toDateString()}</div>`);
-          }
-        });
+  // Calculate difference in days from knownNewMoon to given date
+  function daysSinceKnownNewMoon(date) {
+    return (date - knownNewMoon) / (1000 * 60 * 60 * 24);
+  }
 
-        document.getElementById("phases").innerHTML = results.join('');
-      } catch (e) {
-        document.getElementById("phases").innerHTML = "Failed to load moon phase data.";
+  // Find moon phase (0=new moon, 0.25=first quarter, 0.5=full moon, 0.75=third quarter)
+  function moonPhase(date) {
+    const days = daysSinceKnownNewMoon(date);
+    const phase = (days % lunarCycle) / lunarCycle;
+    return phase < 0 ? phase + 1 : phase; // normalize 0-1
+  }
+
+  // Find next occurrence of given phase after date
+  function nextPhaseDate(currentDate, targetPhase) {
+    let date = new Date(currentDate);
+    const phaseLength = lunarCycle / 4; // ~7.38 days per phase step
+    for(let i=0; i<30; i++) { // search max 30 days ahead
+      const phase = moonPhase(date);
+      if (Math.abs(phase - targetPhase) < 0.03) { // within ~1 day tolerance
+        return date;
       }
+      date.setDate(date.getDate() + 1);
     }
+    return null; // fallback
+  }
 
-    fetchPhases();
-  </script>
+  // Format date nicely
+  function formatDate(date) {
+    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
+    return date.toLocaleString(undefined, options);
+  }
+
+  // Map phase names to target phase values
+  const targetPhases = {
+    "New Moon": 0,
+    "First Quarter": 0.25,
+    "Full Moon": 0.5,
+    "Third Quarter": 0.75
+  };
+
+  // Get current date/time
+  const now = new Date();
+
+  // Find next 4 moon phases starting from now, cycling through phases in order
+  let results = [];
+  let currentPhaseIndex = 0;
+
+  // Find current moon phase index (closest)
+  let currentPhase = moonPhase(now);
+  let closestDiff = 1;
+  for(let i=0; i<phases.length; i++) {
+    let diff = Math.abs(currentPhase - targetPhases[phases[i]]);
+    if(diff > 0.5) diff = 1 - diff; // wrap-around
+    if(diff < closestDiff) {
+      closestDiff = diff;
+      currentPhaseIndex = i;
+    }
+  }
+
+  // Find next 4 phases, cycling through list
+  let searchDate = new Date(now);
+  for(let i=0; i<4; i++) {
+    const phaseName = phases[(currentPhaseIndex + i) % phases.length];
+    const phaseTarget = targetPhases[phaseName];
+    const nextDate = nextPhaseDate(searchDate, phaseTarget);
+    if(nextDate) {
+      results.push({name: phaseName, date: nextDate});
+      // Advance searchDate beyond found phase for next iteration
+      searchDate = new Date(nextDate);
+      searchDate.setDate(searchDate.getDate() + 1);
+    }
+  }
+
+  // Display results
+  const container = document.getElementById("moon-phases-container");
+  if(container) {
+    let html = "<h2>Next 4 Moon Phases</h2><ul>";
+    results.forEach(phase => {
+      html += `<li><strong>${phase.name}</strong> on ${formatDate(phase.date)}</li>`;
+    });
+    html += "</ul>";
+    container.innerHTML = html;
+  }
+})();
+</script>
+
 </body>
 </html>
