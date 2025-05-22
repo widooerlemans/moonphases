@@ -64,7 +64,7 @@
     const phaseLength = lunarCycle / 4; // ~7.38 days per phase step
     for(let i=0; i<40; i++) { // search max 30 days ahead
       const phase = moonPhase(date);
-      if (Math.abs(phase - targetPhase) < 0.05) { // within ~1 day tolerance
+      if (Math.abs(phase - targetPhase) < 0.06) { // within ~1 day tolerance
         return date;
       }
       date.setDate(date.getDate() + 1);
@@ -107,7 +107,7 @@
 
   // Find next 4 phases, cycling through list
   let searchDate = new Date(now);
-  for(let i=0; i<4; i++) {
+  for(let i=0; i<50; i++) {
     const phaseName = phases[(currentPhaseIndex + i) % phases.length];
     const phaseTarget = targetPhases[phaseName];
     const nextDate = nextPhaseDate(searchDate, phaseTarget);
